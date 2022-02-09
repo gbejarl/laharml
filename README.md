@@ -1,2 +1,2 @@
-# Lahars-MTU
+# Lahars@MTU
 Scripts for lahar analyses.
