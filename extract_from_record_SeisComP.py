@@ -10,6 +10,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import time
+import os
 
 
 from laharml import (SeisComP_download_extract,
@@ -24,16 +25,20 @@ from laharml import (SeisComP_download_extract,
 # 2 Initialize parameters
 ##############################
 
+# Set training file path
+
+training_file_path = "training.txt"
+
 # Set date range
 
 start_date = '2022-05-15'
 end_date = '2022-06-01'
 
-# Set up client/server
+# Set client/server
 
 # reserved line
 # reserved line
-server_address = "http://172.20.8.4:8080"
+server_address = "."
 
 # Set up station parameters
 
@@ -78,7 +83,7 @@ link = server_address+"/fdsnws/dataselect/1/query?"
 # Load training dates
 
 s_fm = np.dtype([('station',(str,4)),('datestart',(str,19)),('dateend',(str,19))])
-s_fl = np.loadtxt('training.txt',dtype=s_fm,delimiter='\t',unpack=True,usecols=(0,1,2))
+s_fl = np.loadtxt(training_file_path,dtype=s_fm,delimiter='\t',unpack=True,usecols=(0,1,2))
 
 if station in s_fl[0]:
     ids = np.where(s_fl[0]==station)[0]

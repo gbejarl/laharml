@@ -13,7 +13,7 @@ import time
 import os
 
 
-from laharml import (FDSN_download_extract,
+from laharml import (extract_from_local_directory,
                      train_test_knn,
                      predict_knn,
                      clean_detections,
@@ -31,27 +31,27 @@ training_file_path = "training.txt"
 
 # Set date range
 
-start_date = '2022-05-15'
-end_date = '2022-06-01'
+start_date = '2022-06-01'
+end_date = '2022-11-01'
 
-# Set client/server
+# Set directory path
 
-client_name = "IRIS"
-client_username = "gbejarlo@mtu.edu"
-client_password = "RvXzNm9BaFySykme"
+# reserved line
+# reserved line
+directory = '/Volumes/Tungurahua/FUEGO/SEISMIC'
 
-# Set station parameters
+# Set up station parameters
 
-network = '6Q'
-station = 'FEC1'
-location = '*'
-channel = '*Z'
+network = 'GI'
+station = 'FG12'
+location = '00'
+channel = 'BHZ'
 
 # Set model features, parameters
 
 features = [3, 4, 5, 11]
-window_length = 10  # [required] in minutes
-window_overlap = 0.25  # [required] in fraction of window length
+window_length = 5  # [required] in minutes
+window_overlap = 0.5  # [required] in fraction of window length
 
 # Set output
 
@@ -75,13 +75,13 @@ dt2 = UTCDateTime(end_date)
 
 # reserved line
 
-# Set up client
-
-if client_username == "" or client_password == "":
-    client = Client(client_name)
-else:
-    client = Client(client_name, user=client_username,
-                    password=client_password)
+# reserved line
+# reserved line
+# reserved line
+# reserved line
+# reserved line
+# reserved line
+# reserved line
 
 # Load training dates
 
@@ -107,8 +107,9 @@ for i in range(len(dtm1)):
     starttime = UTCDateTime(dtm1[i])
     endtime = UTCDateTime(dtm2[i])
     extended = (endtime-starttime)/3600/2
-    dl = FDSN_download_extract(client, network, station, location, channel, starttime, endtime, features_class, extended, window=window_length,
-                               overlap=window_overlap, decimate=decimation_factor, min_freq=minimum_frequency, max_freq=maximum_frequency, plot=True)
+    dl = extract_from_local_directory(directory, network, station, location, channel, starttime, endtime, features_class, extended, window=window_length,
+                                      overlap=window_overlap, decimate=decimation_factor, min_freq=minimum_frequency, max_freq=maximum_frequency, plot=True,
+                                      vmin=-125, vmax=200, count_lim=80000)
     sns.scatterplot(data=dl, x='Times', y='Envelope_10Hz',
                     hue='Classification')
     training = pd.concat([training, dl], ignore_index=True, sort=False)
@@ -142,8 +143,8 @@ while starttime < dt2:
           '----\n', end="", flush=True)
 
     try:
-        unclassified_data_frame, st = FDSN_download_extract(
-            client, network, station, location, channel, starttime, endtime, features, window=window_length, overlap=window_overlap, keep=True)
+        unclassified_data_frame, st = extract_from_local_directory(
+            directory, network, station, location, channel, starttime, endtime, features, window=window_length, overlap=window_overlap, keep=True)
         classified_data_frame = predict_knn(
             unclassified_data_frame, model, scaler=scaler)
         cleaned_data_frame = clean_detections(classified_data_frame)
@@ -154,7 +155,7 @@ while starttime < dt2:
 
         if (show_detections == True) and (len(lah_0) > 0):
             plot_detections(cleaned_data_frame, st, show=True, save=False,
-                            target='Detection', vmin=-125, vmax=125, count_lim=200000)
+                            target='Detection', vmin=-125, vmax=125, count_lim=80000)
 
         if save_log:
             xts = np.stack(([i.strftime('%Y-%m-%dT%H:%M:%S') for i in x1],
@@ -166,7 +167,7 @@ while starttime < dt2:
         xts = []
         lah_count = 0
         print('\rNo data, moving to next dates---', end="", flush=True)
-        time.sleep(2)
+# reserved line
 
     if np.any(x1):
         tot_count = len(x1)
@@ -189,8 +190,6 @@ while starttime < dt2:
 
 passed_x1 = []
 passed_x2 = []
-
-xts = np.loadtxt(out_log, delimiter=',', dtype=str, unpack=True)
 
 if not(np.size(xts) == 0):
 
