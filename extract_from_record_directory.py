@@ -27,31 +27,43 @@ from laharml import (extract_from_local_directory,
 
 # Set training file path
 
-training_file_path = "training.txt"
+event_file_path = 'training.txt'
+noise_file_path = 'noise.txt'
+
+# Set data frame path and specify if reading from existing data frame
+
+existing_data_frame = False
+data_frame_directory = ('/Users/gustavo/Library/CloudStorage/' +
+                        'GoogleDrive-gbejarlo@mtu.edu/My Drive/Michigan Tech/' +
+                        'Lahar Project/Analyses/Script performance/' +
+                        'Lahar Analysis/Training/')
 
 # Set date range
 
-start_date = '2022-06-01'
-end_date = '2022-11-01'
+start_date = '2022-01-01'
+end_date = '2023-01-01'
 
 # Set directory path
 
-# reserved line
-# reserved line
 directory = '/Volumes/Tungurahua/FUEGO/SEISMIC'
 
 # Set up station parameters
 
-network = 'GI'
-station = 'FG12'
-location = '00'
-channel = 'BHZ'
+network = 'ZV'
+station = 'FEC2'
+location = ''
+channel = 'HHZ'
 
 # Set model features, parameters
 
-features = [3, 4, 5, 11]
-window_length = 5  # [required] in minutes
-window_overlap = 0.5  # [required] in fraction of window length
+features = [4, 8, 19, 33, 34, 39]
+# features = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+#             10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+#             20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+#             33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
+#             43]
+window_length = 10  # [required] in minutes
+window_overlap = 0.75
 
 # Set output
 
@@ -61,9 +73,14 @@ save_log = True
 save_detections = True
 
 # Other optional parameters
+
 decimation_factor = []  # decimate data by this factor
 minimum_frequency = []  # in Hz
 maximum_frequency = []  # in Hz
+extended = 0
+vmin = -25
+vmax = 60
+count_lim = 75000
 
 ##############################
 # %% 3 Script
@@ -73,60 +90,112 @@ maximum_frequency = []  # in Hz
 dt1 = UTCDateTime(start_date)
 dt2 = UTCDateTime(end_date)
 
-# reserved line
-
-# reserved line
-# reserved line
-# reserved line
-# reserved line
-# reserved line
-# reserved line
-# reserved line
-
-# Load training dates
-
-s_fm = np.dtype([('station', (str, 4)), ('datestart',
-                (str, 19)), ('dateend', (str, 19))])
-s_fl = np.loadtxt(training_file_path, dtype=s_fm,
-                  delimiter='\t', unpack=True, usecols=(0, 1, 2))
-
-if station in s_fl[0]:
-    ids = np.where(s_fl[0] == station)[0]
-    dtm1 = [UTCDateTime(i) for i in s_fl[1][ids]]
-    dtm2 = [UTCDateTime(i) for i in s_fl[2][ids]]
-else:
-    print('Station not found in training date file, try again.')
-
 # Model training
 
-features_class = features.copy()
-features_class.append(12)
-training = pd.DataFrame()
+data_frame_file = (network+'.'+station+'.'+location+'.'+channel+'_' +
+                   str(window_length)+'_'+str(window_overlap)+'.csv')
+data_frame_path = os.path.join(data_frame_directory, data_frame_file)
 
-for i in range(len(dtm1)):
-    starttime = UTCDateTime(dtm1[i])
-    endtime = UTCDateTime(dtm2[i])
-    extended = (endtime-starttime)/3600/2
-    dl = extract_from_local_directory(directory, network, station, location, channel, starttime, endtime, features_class, extended, window=window_length,
-                                      overlap=window_overlap, decimate=decimation_factor, min_freq=minimum_frequency, max_freq=maximum_frequency, plot=True,
-                                      vmin=-125, vmax=200, count_lim=80000)
-    sns.scatterplot(data=dl, x='Times', y='Envelope_10Hz',
-                    hue='Classification')
-    training = pd.concat([training, dl], ignore_index=True, sort=False)
+if not(existing_data_frame):
+
+    # Load training dates
+
+    s_fm = np.dtype([('station', (str, 4)), ('datestart',
+                    (str, 19)), ('dateend', (str, 19))])
+    s_fl = np.loadtxt(event_file_path, dtype=s_fm,
+                      delimiter='\t', unpack=True, usecols=(0, 1, 2))
+
+    if station in s_fl[0]:
+        ids = np.where(s_fl[0] == station)[0]
+        dtm1 = [UTCDateTime(i) for i in s_fl[1][ids]]
+        dtm2 = [UTCDateTime(i) for i in s_fl[2][ids]]
+    else:
+        print('Station not found in training date file, try again.')
+
+    # Define desired features
+
+    training = pd.DataFrame()
+
+    # Extract features
+
+    signal_time = 0
+
+    features.append(101)
+
+    for i in range(len(dtm1)):
+        starttime = UTCDateTime(dtm1[i])
+        endtime = UTCDateTime(dtm2[i])
+        dl = extract_from_local_directory(directory,
+                                          network,
+                                          station,
+                                          location,
+                                          channel,
+                                          starttime,
+                                          endtime,
+                                          features,
+                                          extended,
+                                          window=window_length,
+                                          overlap=window_overlap,
+                                          plot=True,
+                                          vmin=vmin,
+                                          vmax=vmax,
+                                          count_lim=count_lim)
+        signal_time += endtime-starttime
+        training = pd.concat([training, dl], ignore_index=True, sort=False)
+    print('Total signal time: '+str(signal_time/3600)+' hours')
+
+    s_fm = np.dtype([('station', (str, 4)), ('datestart',
+                    (str, 19)), ('type', (str, 2))])
+    s_fl = np.loadtxt(noise_file_path, dtype=s_fm,
+                      delimiter='\t', unpack=True, usecols=(0, 1, 2))
+
+    if station in s_fl[0]:
+        ids = np.where(s_fl[0] == station)[0]
+        dtm1 = [UTCDateTime(i) for i in s_fl[1][ids]]
+    else:
+        print('Station not found in training date file, try again.')
+
+    features[-1] = 100
+    duration_noise_event = signal_time/len(dtm1)
+
+    for i in range(len(dtm1)):
+        starttime = UTCDateTime(dtm1[i])-(duration_noise_event/2)
+        endtime = UTCDateTime(dtm1[i])+(duration_noise_event/2)
+        dl = extract_from_local_directory(directory,
+                                          network,
+                                          station,
+                                          location,
+                                          channel,
+                                          starttime,
+                                          endtime,
+                                          features,
+                                          extended,
+                                          window=window_length,
+                                          overlap=window_overlap,
+                                          plot=True,
+                                          vmin=vmin,
+                                          vmax=vmax,
+                                          count_lim=count_lim)
+        training = pd.concat([training, dl], ignore_index=True, sort=False)
+        training.to_csv(data_frame_path)
+
+    del features[-1]
+
+else:
+
+    training = pd.read_csv(data_frame_path, index_col=0)
+    columns = list(training.columns[features])
+    columns.append('Times')
+    columns.append('Classification')
+    training = training[columns]
 
 model, scaler, classification_report, confusion_matrix, neighbors = train_test_knn(training,
                                                                                    scale=True,
                                                                                    get_n=True,
                                                                                    plot_n=True)
 
-print('''Training model with {var_n} neighbors:
-Correct positive predictions are {var_1} out of {var_2} total positive predictions.
-Correct negative predictions are {var_3} out of {var_4} total negative predictions.
-'''.format(var_n=neighbors,
-           var_1=confusion_matrix[0, 0],
-           var_2=confusion_matrix[0, 0]+confusion_matrix[0, 1],
-           var_3=confusion_matrix[1, 1],
-           var_4=confusion_matrix[1, 1]+confusion_matrix[1, 0]))
+print(classification_report, confusion_matrix)
+print("Neighbors: "+str(neighbors))
 
 # Datetime rolling
 
@@ -144,7 +213,18 @@ while starttime < dt2:
 
     try:
         unclassified_data_frame, st = extract_from_local_directory(
-            directory, network, station, location, channel, starttime, endtime, features, window=window_length, overlap=window_overlap, keep=True)
+            directory,
+            network,
+            station,
+            location,
+            channel,
+            starttime,
+            endtime,
+            features,
+            window=window_length,
+            overlap=window_overlap,
+            keep=True)
+
         classified_data_frame = predict_knn(
             unclassified_data_frame, model, scaler=scaler)
         cleaned_data_frame = clean_detections(classified_data_frame)
@@ -180,7 +260,7 @@ while starttime < dt2:
           Finished detections for the following dates:
           {date_1} to {date_2}.
           Detections found = {number_1}
-          Number of detections saved = {number_2}  
+          Number of detections saved = {number_2}
           '''.format(date_1=starttime.strftime('%Y-%m-%dT%H:%M:%S'),
                      date_2=endtime.strftime('%Y-%m-%dT%H:%M:%S'),
                      number_1=lah_count,
@@ -231,3 +311,5 @@ if save_detections and (not(np.size(x1)) == 0):
         UTCDateTime(x1[0]).strftime('%Y%m%d')+'_' + \
         UTCDateTime(x2[-1]).strftime('%Y%m%d')+'.txt'
     np.savetxt(out_dts, xts, delimiter=",", fmt='%s')
+
+# %%
