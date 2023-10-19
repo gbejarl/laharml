@@ -35,9 +35,9 @@ def extract_from_local_directory(directory,
                                  extended=0,
                                  window=5,
                                  overlap=0.25,
-                                 decimate=[],
-                                 min_freq=[],
-                                 max_freq=[],
+                                 decimate=None,
+                                 min_freq=None,
+                                 max_freq=None,
                                  keep=False,
                                  plot=False,
                                  vmin=None,
@@ -112,15 +112,14 @@ def extract_from_local_directory(directory,
             print('File not found: '+i)
 
     st.trim((starttime-(extended*3600)), (endtime+(extended*3600)))
-    stored_stream = st.copy()
 
     print('\rPreprocessing-------------------', end="", flush=True)
 
-    st = st.merge(fill_value='interpolate').detrend(
-        'linear').select(channel=channel)[0]
-
-    if decimate:
-        st.decimate(factor=decimate)
+    st = st.merge(
+        fill_value='interpolate',
+        interpolation_samples=0,
+        method=0).detrend(
+            'linear').select(channel=channel)[0]
 
     if min_freq or max_freq:
         if min_freq and max_freq:
@@ -130,9 +129,13 @@ def extract_from_local_directory(directory,
         elif max_freq:
             st.filter('lowpass', freq=max_freq)
 
+    if decimate:
+        st.decimate(factor=decimate)
+
+    stored_stream = st.copy()
+
     st_x = st.data
     st_t = st.times(type='timestamp')
-    times = np.array([])
 
     # Plot
 
@@ -873,8 +876,8 @@ def SeisComP_download_extract(head='',
 
     url += url8
 
-    #path = '/temp'
-    #Path(path).mkdir(parents=True, exist_ok=True)
+    # path = '/temp'
+    # Path(path).mkdir(parents=True, exist_ok=True)
 
     fn = 'temp_stream.mseed'
     ff = requests.get(url)
@@ -1207,7 +1210,7 @@ def predict_knn(data_frame, model, scaler=[]):
 # %% clean_detections
 
 
-def clean_detections(data_frame, min_gap=30, min_sig=30, min_duration=30):
+def clean_detections(data_frame, min_gap=15, min_sig=15, min_duration=30):
 
     # Indices of all non-predictions
     zero_index = np.array(
@@ -1220,6 +1223,7 @@ def clean_detections(data_frame, min_gap=30, min_sig=30, min_duration=30):
         # Time between samples
         tst = data_frame['Times'].iloc[1]-data_frame['Times'].iloc[0]
 
+        # Shortened indices of non-predictions for comparison
         pred1 = zero_index[:-1]
         pred2 = zero_index[1:]
 
@@ -1233,11 +1237,11 @@ def clean_detections(data_frame, min_gap=30, min_sig=30, min_duration=30):
     # Significant detections
 
     # If predictions start at index 0, include the first prediction
-    if not(0 in zero_index):
+    if not (0 in zero_index):
         pair_0 = [0, zero_index[0]-1]
 
     # If predictions end at the last index, include the last prediction
-        if not(len(data_frame['Prediction'])-1 in zero_index):
+        if not (len(data_frame['Prediction'])-1 in zero_index):
             sig_pairs = [[zero_index[i]+1, zero_index[i+1]-1]
                          for i in cont[:-1]]
             pair_1 = [zero_index[-1]+1, len(data_frame['Prediction'])-1]
@@ -1248,7 +1252,7 @@ def clean_detections(data_frame, min_gap=30, min_sig=30, min_duration=30):
             sig_pairs.insert(0, pair_0)
 
     else:
-        if not(len(data_frame['Prediction'])-1 in zero_index):
+        if not (len(data_frame['Prediction'])-1 in zero_index):
             sig_pairs = [[zero_index[i]+1, zero_index[i+1]-1]
                          for i in cont[:-1]]
             pair_1 = [zero_index[-1]+1, len(data_frame['Prediction'])-1]
@@ -1258,7 +1262,7 @@ def clean_detections(data_frame, min_gap=30, min_sig=30, min_duration=30):
 
     # If two detections are closer than min_sig, merge them
     for i in range(len(sig_pairs)-1):
-        if ((sig_pairs[i+1][0]-sig_pairs[i][1])*tst) < min_sig*60*2:
+        if ((sig_pairs[i+1][0]-sig_pairs[i][1])*tst) < min_sig*60:
             sig_pairs[i+1][0] = sig_pairs[i][0]
             sig_pairs[i][1] = sig_pairs[i+1][1]
 
@@ -1282,14 +1286,14 @@ def clean_detections(data_frame, min_gap=30, min_sig=30, min_duration=30):
             while ((bw_i-ones_index[bw_d[-1]])*tst) < min_gap*60:
                 bw_i = ones_index[bw_d[-1]]
                 bw_d = np.where(ones_index < bw_i)[0]
-                if not(np.any(bw_d)):
+                if not (np.any(bw_d)):
                     break
 
         if np.any(fw_d):
             while ((ones_index[fw_d[0]]-fw_i)*tst) < min_gap*60:
                 fw_i = ones_index[fw_d[0]]
                 fw_d = np.where(ones_index > fw_i)[0]
-                if not(np.any(fw_d)):
+                if not (np.any(fw_d)):
                     break
 
         final_pairs.append([bw_i, fw_i])
@@ -1520,9 +1524,6 @@ def plot_detections(data_frame, st, target='Detection', vmin=-125, vmax=125, sav
 
     t0 = [x.matplotlib_date for x in dt[0]]
     t1 = [x.matplotlib_date for x in dt[1]]
-
-    st = st.merge(fill_value='interpolate').detrend('linear')
-    st = st.select(component='Z')[0]
 
     st_x = st.data
     st_t = st.times(type='matplotlib')
