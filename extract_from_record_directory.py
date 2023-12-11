@@ -54,7 +54,7 @@ directory = '/Volumes/Tungurahua/FUEGO/SEISMIC'
 # location = ''
 # channel = 'HHZ'
 network = 'GI'
-station = 'FG16'
+station = 'FG12'
 location = '00'
 channel = 'BHZ'
 
@@ -66,7 +66,7 @@ features = [4, 6, 19, 34, 39]
 #             20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
 #             33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
 #             43]
-window_length = 10  # in minutes
+window_length = 30  # in minutes
 window_overlap = 0.75  # in fraction of window length
 
 # Set output file path (blank to save in current directory)
@@ -329,7 +329,7 @@ while starttime < dt2:
         # Save log file
 
         if save_log:
-            out_log = 'log_'+station+'_' + \
+            out_log = 'log_'+station+'_' + f"{window_length:02d}" + '_' + \
                 dt1.strftime('%Y%m%d')+'_'+dt2.strftime('%Y%m%d')+'.txt'
             np.savetxt(out_log, xts, delimiter=",", fmt='%s')
 
@@ -433,7 +433,7 @@ else:
 if save_detections and (len(x1) > 0):
 
     xts = np.stack((x1, x2), axis=-1)
-    out_dts = 'detection_'+station+'_' + \
+    out_dts = 'detection_'+station+'_' + f"{window_length:02d}" + '_' +\
         UTCDateTime(x1[0]).strftime('%Y%m%d')+'_' + \
         UTCDateTime(x2[-1]).strftime('%Y%m%d')+'.txt'
     np.savetxt(out_dts, xts, delimiter=",", fmt='%s')
