@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import time
 import os
 
 from laharml import (extract_from_local_directory,
@@ -29,7 +30,7 @@ from laharml import (extract_from_local_directory,
 event_file_path = 'training.txt'
 noise_file_path = 'noise.txt'
 
-# Set data frame path and specify if reading from existing data frame
+# Set training data frame path and specify if reading from existing data frame
 
 existing_data_frame = False
 data_frame_directory = ('/Users/gustavo/Library/CloudStorage/' +
@@ -43,16 +44,14 @@ data_frame_directory = ('/Users/gustavo/Library/CloudStorage/' +
 start_date = '2018-01-01'
 end_date = '2023-01-01'
 
-# Set directory path
+# Set data directory path
 
 directory = '/Volumes/Tungurahua/FUEGO/SEISMIC'
 
-# Set up station parameters
+# Reserved line
 
-# network = 'ZV'
-# station = 'FEC2'
-# location = ''
-# channel = 'HHZ'
+# Set station parameters
+
 network = 'GI'
 station = 'FG12'
 location = '00'
@@ -61,13 +60,8 @@ channel = 'BHZ'
 # Set model features, parameters
 
 features = [4, 6, 19, 34, 39]
-# features = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-#             10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-#             20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-#             33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
-#             43]
-window_length = 30  # in minutes
-window_overlap = 0.75  # in fraction of window length
+window_length = 10  # [required] in minutes
+window_overlap = 0.75  # [required] in fraction of window length
 
 # Set output file path (blank to save in current directory)
 
@@ -106,6 +100,14 @@ dt2 = UTCDateTime(end_date)
 data_frame_file = (network+'.'+station+'.'+location+'.'+channel+'_' +
                    str(window_length)+'_'+str(window_overlap)+'.csv')
 data_frame_path = os.path.join(data_frame_directory, data_frame_file)
+
+# Reserved line
+# Reserved line
+# Reserved line
+# Reserved line
+# Reserved line
+# Reserved line
+# Reserved line
 
 # Read data frame from existing file or create new data frame
 
@@ -270,6 +272,7 @@ while starttime < dt2:
         continue
 
     # Classify samples
+
     try:
         classified_data_frame = predict_knn(
             unclassified_data_frame, model, scaler=scaler)
@@ -384,23 +387,6 @@ if tot_count:
     r2b = np.array(r2b)
 
     # Step 3: Remove overlapping detections
-
-    # for i in range(len(r2a)):
-    #     skipped = [*range(len(r2a))]
-    #     skipped.remove(i)
-    #     for j in skipped:
-    #         if (UTCDateTime(r2a[i]) <= UTCDateTime(r2b[j])) and \
-    #                 (UTCDateTime(r2b[i]) >= UTCDateTime(r2a[j])):
-    #             if (UTCDateTime(r2b[j])-UTCDateTime(r2a[j])) <= \
-    #                     (UTCDateTime(r2b[i])-UTCDateTime(r2a[i])):
-    #                 r3a.append(r2a[i])
-    #                 r3b.append(r2b[i])
-    #             else:
-    #                 r3a.append([])
-    #                 r3b.append([])
-    #         else:
-    #             r3a.append(r2a[i])
-    #             r3b.append(r2b[i])
 
     for i in range(len(r2a)):
         skipped = [*range(len(r2a))]
